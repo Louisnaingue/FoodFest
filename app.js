@@ -1,185 +1,186 @@
 /* ==========================================
    Google Sheets API URL
 ========================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzOYffZsNKmf_1Bp6q_wxarT1kQRCVoqGRNM7SmLUKL_yI5oUQHZkDxyP9xW2_Q6bX0/exec?api=leaderboard';
+const REFRESH_INTERVAL = 10000;
+let isLoading = false;
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzOYffZsNKmf_1Bp6q_wxarT1kQRCVoqGRNM7SmLUKL_yI5oUQHZkDxyP9xW2_Q6bX0/exec?api=leaderboard";
-/* ==========================================
-   Auto Refresh
-========================================== */
-
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', () => {
   loadLeaderboard();
-
-  // Refresh every 10 seconds
-  setInterval(loadLeaderboard, 10000);
+  window.setInterval(loadLeaderboard, REFRESH_INTERVAL);
 });
 
-
 /* ==========================================
-   Fetch Google Sheet Data
+   Fetch the latest sheet data
 ========================================== */
-
 async function loadLeaderboard() {
-  try {
-    const response = await fetch(API_URL);
+  if (isLoading) return;
+  isLoading = true;
 
-    if (!response.ok) {
-      throw new Error("Request failed: " + response.status);
-    }
+  try {
+    const response = await fetch(API_URL, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
     const items = await response.json();
-
-    console.log("Google Sheet Data:", items);
+    if (!Array.isArray(items)) {
+      throw new Error('The API did not return a list of menu items.');
+    }
 
     updateLeaderboard(items);
+    setUpdateMessage(
+      `Updated ${new Date().toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit'
+      })}`
+    );
   } catch (error) {
-    console.error("Unable to load leaderboard:", error);
+    console.error('Unable to load leaderboard:', error);
+    setUpdateMessage('Unable to refresh sales data');
+
+    const root = document.getElementById('leaderboard');
+    if (!root.querySelector('.table-container')) {
+      root.innerHTML =
+        '<p class="empty-state">Sales data could not be loaded. Please try again shortly.</p>';
+    }
+  } finally {
+    isLoading = false;
   }
 }
 
-
 /* ==========================================
-   Update Leaderboard
+   Update summary cards and leaderboard
 ========================================== */
-
 function updateLeaderboard(items) {
-  const tbody = document.getElementById("leaderboardBody");
-
-  tbody.innerHTML = "";
-
-  if (!items || items.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">No data available</td>
-      </tr>
-    `;
-    return;
-  }
-
-  // Sort items by status, then by highest order count
   const statusOrder = {
-    "Serving": 0,
-    "Paused": 1,
-    "Sold Out": 2
+    Serving: 0,
+    Paused: 1,
+    'Sold Out': 2
   };
 
   const sorted = [...items].sort((a, b) => {
     const statusDifference =
       (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
 
-    if (statusDifference !== 0) {
-      return statusDifference;
-    }
+    if (statusDifference !== 0) return statusDifference;
 
-    return Number(b.orders || 0) - Number(a.orders || 0);
+    return (Number(b.orders) || 0) - (Number(a.orders) || 0);
   });
 
-  // Count unique clubs
-  const allClubs = new Set(items.map(item => item.clubName));
-  const servingClubs = new Set(
-    items
-      .filter(item => item.status === "Serving")
-      .map(item => item.clubName)
+  const allClubs = new Set(
+    items.map(item => item.clubName).filter(Boolean)
   );
 
-  document.getElementById("clubsServing").textContent =
-    servingClubs.size;
+  const servingClubs = new Set(
+    items
+      .filter(item => item.status === 'Serving')
+      .map(item => item.clubName)
+      .filter(Boolean)
+  );
 
-  document.getElementById("totalClubs").textContent =
-    allClubs.size;
+  document.getElementById('clubsServing').textContent =
+    servingClubs.size.toLocaleString();
 
-  document.getElementById("totalOrders").textContent =
+  document.getElementById('totalClubs').textContent =
+    allClubs.size.toLocaleString();
+
+  document.getElementById('totalOrders').textContent =
     items.reduce(
       (total, item) => total + (Number(item.orders) || 0),
       0
-    );
+    ).toLocaleString();
 
-  // Build the table
-  sorted.forEach((item, index) => {
-    const row = document.createElement("tr");
-    const statusClass = getStatusClass(item.status);
+  const root = document.getElementById('leaderboard');
 
-    row.innerHTML = `
-      <td>${index + 1}</td>
+  if (!sorted.length) {
+    root.innerHTML =
+      '<p class="empty-state">No menu items are available right now.</p>';
+    return;
+  }
 
-      <td class="club-name">
-        ${escapeHTML(item.clubName)}
-      </td>
+  // Split the sorted list into two side-by-side tables on wide screens.
+  const midpoint = Math.ceil(sorted.length / 2);
 
-      <td>
-        <span class="category">
-          ${escapeHTML(item.category)}
-        </span>
-      </td>
-
-      <td>
-        ${escapeHTML(item.foodItem)}
-      </td>
-
-      <td class="price">
-        $${(Number(item.price) || 0).toFixed(2)}
-      </td>
-      <td>
-        <span class="status ${statusClass}">
-          ${escapeHTML(item.status)}
-        </span>
-      </td>
-
-      <td>
-        ${getBadge(item.recognition)}
-      </td>
-
-      
-    `;
-
-    tbody.appendChild(row);
-  });
+  root.innerHTML =
+    renderTable(sorted.slice(0, midpoint), 0) +
+    renderTable(sorted.slice(midpoint), midpoint);
 }
 
+function renderTable(items, rankOffset) {
+  const rows = items.map((item, index) => {
+    const status = String(item.status || '');
+    const statusClass = getStatusClass(status);
 
-/* ==========================================
-   Recognition Badge
-========================================== */
-
-function getBadge(recognition) {
-  const text = recognition || "Participant";
-  const badgeClass =
-    text.toLowerCase().includes("best") ? "gold" : "pending";
+    return `
+      <tr>
+        <td>${rankOffset + index + 1}</td>
+        <td class="club-name">${escapeHTML(item.clubName)}</td>
+        <td><span class="category">${escapeHTML(item.category)}</span></td>
+        <td class="food-name">${escapeHTML(item.foodItem)}</td>
+        <td class="price">$${(Number(item.price) || 0).toFixed(2)}</td>
+        <td>
+          <span class="status ${statusClass}">
+            ${escapeHTML(status || 'Unknown')}
+          </span>
+        </td>
+        <td>
+          <span class="badge ${getBadgeClass(item.recognition)}">
+            ${escapeHTML(item.recognition || 'Participant')}
+          </span>
+        </td>
+      </tr>`;
+  }).join('');
 
   return `
-    <span class="badge ${badgeClass}">
-      ${escapeHTML(text)}
-    </span>
-  `;
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Club</th>
+            <th>Category</th>
+            <th>Food</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Recognition</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
-
 /* ==========================================
-   Status Styling
+   Badges, status and safe text
 ========================================== */
+function getBadgeClass(recognition) {
+  const text = String(recognition || '').toLowerCase();
+
+  if (text.includes('best') || text.includes('gold')) return 'gold';
+  if (text.includes('second') || text.includes('silver')) return 'silver';
+  if (text.includes('third') || text.includes('bronze')) return 'bronze';
+
+  return 'pending';
+}
 
 function getStatusClass(status) {
-  if (status === "Serving") return "serving";
-  if (status === "Paused") return "paused";
-  if (status === "Sold Out") return "sold-out";
-  return "";
+  if (status === 'Serving') return 'serving';
+  if (status === 'Paused') return 'paused';
+  if (status === 'Sold Out') return 'sold-out';
+
+  return 'pending';
 }
 
-
-/* ==========================================
-   Safe Text Display
-========================================== */
-
 function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, character => {
-    const entities = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    };
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
 
-    return entities[character];
-  });
+function setUpdateMessage(message) {
+  const label = document.getElementById('lastUpdated');
+  if (label) label.textContent = message;
 }

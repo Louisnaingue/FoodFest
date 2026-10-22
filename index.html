@@ -1,121 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BYUH Food Fest Leaderboard</title>
-
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ba0c2f">
+  <title>BYUH Food Fest Sales</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow">BYU–Hawaii · Fall 2026</p>
+      <h1>Food Fest Sales</h1>
+      <p class="hero-subtitle">See what our clubs are serving.</p>
+    </div>
+  </header>
 
-    <!-- ===========================
-         Header
-    ============================ -->
+  <section class="stats-container" aria-label="Food Fest summary">
+    <article class="stat-card">
+      <h2 id="clubsServing">0</h2>
+      <p>Clubs Serving</p>
+    </article>
+    <article class="stat-card">
+      <h2 id="totalOrders">0</h2>
+      <p>Total Orders</p>
+    </article>
+    <article class="stat-card">
+      <h2 id="totalClubs">0</h2>
+      <p>Total Clubs</p>
+    </article>
+  </section>
 
-    <header class="hero">
+  <main class="container">
+    <div id="leaderboard" class="leaderboard-grid" aria-live="polite"></div>
+  </main>
 
-        <div class="hero-content">
+  <footer>
+    <p>BYU–Hawaii Food Fest</p>
+  </footer>
 
-            <h1>Food Fest Sales</h1>
-            <br>
-
-        </div>
-
-    </header>
-
-    <!-- ===========================
-         Statistics
-    ============================ -->
-
-    <section class="stats-container">
-
-        <div class="stat-card">
-
-            <h2 id="clubsServing">0</h2>
-
-            <p>Clubs Serving</p>
-
-        </div>
-
-        <div class="stat-card">
-
-            <h2 id="totalOrders">0</h2>
-
-            <p>Total Orders</p>
-
-        </div>
-
-        <div class="stat-card">
-
-            <h2 id="totalClubs">0</h2>
-
-            <p>Total Clubs</p>
-
-        </div>
-
-    </section>
-
-    <!-- ===========================
-         Leaderboard
-    ============================ -->
-
-    <main class="container">
-
-        <div class="table-container">
-
-            <table>
-
-                <thead>
-
-                    <tr>
-
-                        <th>Rank</th>
-
-                        <th>Club</th>
-
-                        <th>Category</th>
-
-                        <th>Food</th>
-
-                        <th>Price</th>
-
-                        <th>Status</th>
-
-                        <th>Recognition</th>
-
-
-                    </tr>
-
-                </thead>
-
-                <tbody id="leaderboardBody">
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </main>
-
-    <!-- ===========================
-         Footer
-    ============================ -->
-
-    <footer>
-
-        <p>
-            BYU–Hawaii Food Fest
-        </p>
-
-    </footer>
-
-    <script src="app.js"></script>
-
+  <script src="app.js"></script>
 </body>
 </html>
